@@ -15,15 +15,40 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v4
 
+      - name: Find Cargo workspace
+        shell: pwsh
+        run: |
+          $files = Get-ChildItem -Path . -Filter Cargo.toml -Recurse -File |
+            Where-Object { $_.FullName -notmatch '[\\/](target|\.git)[\\/]' }
+
+          $project = $null
+
+          foreach ($file in $files) {
+            $content = Get-Content $file.FullName -Raw
+            if ($content -match '(?m)^\[workspace\]') {
+              $project = $file.DirectoryName
+              break
+            }
+          }
+
+          if (!$project) {
+            $files | ForEach-Object { Write-Host $_.FullName }
+            throw "找不到 Cargo workspace，请检查项目文件是否完整上传。"
+          }
+
+          "PROJECT_DIR=$project" >> $env:GITHUB_ENV
+          Write-Host "项目目录：$project"
+
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 
       - name: Build EXE
         run: cargo build --release -p fqpc
+        working-directory: ${{ env.PROJECT_DIR }}
 
       - name: Upload EXE
         uses: actions/upload-artifact@v4
         with:
           name: Tomato-Supermarket-Windows
-          path: target/release/fqpc.exe
+          path: ${{ env.PROJECT_DIR }}/target/release/fqpc.exe
           if-no-files-found: error
