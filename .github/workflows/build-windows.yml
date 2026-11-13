@@ -1,0 +1,29 @@
+
+name: Build Windows EXE
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build Tomato Supermarket EXE
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build EXE
+        run: cargo build --release -p fqpc
+
+      - name: Upload EXE
+        uses: actions/upload-artifact@v4
+        with:
+          name: Tomato-Supermarket-Windows
+          path: target/release/fqpc.exe
+          if-no-files-found: error
